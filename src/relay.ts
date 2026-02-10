@@ -218,26 +218,62 @@ bot.on("message:text", async (ctx) => {
   await sendResponse(ctx, response);
 });
 
-// Voice messages (optional - requires transcription)
+// Voice messages (transcription via Google Gemini)
 bot.on("message:voice", async (ctx) => {
   console.log("Voice message received");
   await ctx.replyWithChatAction("typing");
 
-  // To handle voice, you need a transcription service
-  // Options: Whisper API, Gemini, AssemblyAI, etc.
-  //
-  // Example flow:
-  // 1. Download the voice file
-  // 2. Send to transcription service
-  // 3. Pass transcription to Claude
-  //
-  // const transcription = await transcribe(voiceFile);
-  // const response = await callClaude(`[Voice]: ${transcription}`);
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) {
+    await ctx.reply("Voice transcription requires GEMINI_API_KEY in .env");
+    return;
+  }
 
-  await ctx.reply(
-    "Voice messages require a transcription service. " +
-      "Add Whisper, Gemini, or similar to handle voice."
-  );
+  try {
+    // 1. Download the voice file
+    const file = await ctx.api.getFile(ctx.message.voice.file_id);
+    const fileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${file.file_path}`;
+    const audioResponse = await fetch(fileUrl);
+    const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
+    const base64Audio = audioBuffer.toString("base64");
+
+    // 2. Send to Gemini for transcription
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: "Transcribe this audio message exactly. Return only the transcription, no commentary." },
+              { inline_data: { mime_type: "audio/ogg", data: base64Audio } },
+            ],
+          }],
+        }),
+      }
+    );
+
+    const geminiResult = await geminiResponse.json() as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const transcription = geminiResult.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+    if (!transcription) {
+      await ctx.reply("Could not transcribe the voice message.");
+      return;
+    }
+
+    console.log(`Transcription: ${transcription.substring(0, 50)}...`);
+
+    // 3. Pass transcription to Claude
+    const enrichedPrompt = buildPrompt(`[Voice message]: ${transcription}`);
+    const response = await callClaude(enrichedPrompt, { resume: true });
+    await sendResponse(ctx, response);
+  } catch (err) {
+    console.error("Voice transcription error:", err);
+    await ctx.reply("Failed to process voice message. Please try again.");
+  }
 });
 
 // Photos/Images
