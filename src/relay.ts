@@ -14,6 +14,8 @@ import { join, dirname } from "path";
 import { log, logError } from "./logger";
 import { saveMessage, getRecentMessages, getMemoryContext, processIntents } from "./memory";
 import { textToSpeech, isTTSAvailable } from "./tts";
+import { initiatePhoneCall, isPhoneAvailable } from "./phone";
+import { processCallTranscript, formatTranscriptResult } from "./voice/call-transcript";
 import { extractActions, queueAction, approveAction, denyAction } from "./actions";
 import { tryFallbacks, isFallbackEnabled, type ProviderResult } from "./fallback";
 import {
@@ -448,6 +450,52 @@ bot.command("setup_topics", async (ctx) => {
   await ctx.reply(`Created ${created}/${agents.length} agent topics. Mapping saved to config/agents.json.\n\nSet TELEGRAM_FORUM_GROUP_ID=${chatId} in your .env file.`);
 });
 
+// /call — Initiate a phone call with context
+bot.command("call", async (ctx) => {
+  if (!isPhoneAvailable()) {
+    await ctx.reply(
+      "Phone calls require ElevenLabs + Twilio configuration.\n\n" +
+      "Set in .env:\n" +
+      "- ELEVENLABS_API_KEY\n" +
+      "- ELEVENLABS_AGENT_ID\n" +
+      "- ELEVENLABS_PHONE_NUMBER_ID\n" +
+      "- USER_PHONE_NUMBER"
+    );
+    return;
+  }
+
+  const reason = ctx.match?.trim() || "Quick check-in";
+  log("call_requested", reason.substring(0, 80));
+
+  await ctx.reply(`Calling you about: ${reason}`);
+
+  const result = await initiatePhoneCall(reason);
+
+  if (!result.success) {
+    await ctx.reply("Failed to initiate call. Check ElevenLabs/Twilio configuration.");
+    return;
+  }
+
+  await ctx.reply("Call initiated! I'll send a summary when it's done.");
+
+  // Poll for transcript in the background
+  if (result.conversationId) {
+    processCallTranscript(result.conversationId).then(async (transcript) => {
+      const summary = formatTranscriptResult(transcript);
+      try {
+        await bot.api.sendMessage(ctx.chat.id, summary);
+
+        // Save to memory
+        if (transcript.status === "completed") {
+          saveMessage("assistant", `[Phone Call Summary] ${transcript.summary}`);
+        }
+      } catch (err) {
+        logError("call_summary_error", "Failed to send call summary", err);
+      }
+    });
+  }
+});
+
 // ============================================================
 // MESSAGE HANDLERS
 // ============================================================
@@ -843,6 +891,7 @@ log("bot_starting", "Claude Telegram Relay starting", {
     projectDir: PROJECT_DIR || "(relay working directory)",
     healthPort: HEALTH_PORT,
     ttsAvailable: isTTSAvailable(),
+    phoneAvailable: isPhoneAvailable(),
     forumMode: isForumMode(),
     forumGroupId: FORUM_GROUP_ID || undefined,
   },

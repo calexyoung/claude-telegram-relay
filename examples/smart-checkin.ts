@@ -15,6 +15,7 @@ import { spawn } from "bun";
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { initiatePhoneCall, isPhoneAvailable } from "../src/phone";
+import { processCallTranscript, formatTranscriptResult } from "../src/voice/call-transcript";
 import { getActiveTasks, formatTasks } from "../src/integrations/notion";
 import { getTodayEvents, formatEvents } from "../src/integrations/calendar";
 import { getMemoryContext } from "../src/memory";
@@ -217,8 +218,17 @@ async function main() {
       const result = await initiatePhoneCall(message);
       success = result.success;
       if (success) {
-        // Also send a text summary
-        await sendTelegram(`[Called you about: ${message}]`);
+        // Send a text notification about the call
+        await sendTelegram(`[Calling you about: ${message}]`);
+
+        // Poll for transcript and send summary when done
+        if (result.conversationId) {
+          console.log("Waiting for call transcript...");
+          const transcript = await processCallTranscript(result.conversationId);
+          const summary = formatTranscriptResult(transcript);
+          await sendTelegram(summary);
+          console.log(`Call transcript: ${transcript.status}, ${transcript.actionItems.length} action items`);
+        }
       } else {
         // Fall back to text if call fails
         console.log("Call failed, falling back to text...");
