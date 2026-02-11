@@ -13,6 +13,7 @@
     "setup:verify": "bun run setup/verify.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
     "grammy": "^1.21.1"
   },
   "devDependencies": {

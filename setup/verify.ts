@@ -124,6 +124,14 @@ async function main() {
     ? pass("Voice transcription (Gemini) configured")
     : warn("No GEMINI_API_KEY — voice messages won't be transcribed");
 
+  env.ELEVENLABS_API_KEY && !env.ELEVENLABS_API_KEY.includes("your_")
+    ? pass("Voice replies (ElevenLabs TTS) configured")
+    : warn("No ELEVENLABS_API_KEY — voice replies disabled");
+
+  env.ELEVENLABS_AGENT_ID && env.ELEVENLABS_PHONE_NUMBER_ID && env.USER_PHONE_NUMBER
+    ? pass("Phone calls (ElevenLabs + Twilio) configured")
+    : warn("Phone calls not configured (ELEVENLABS_AGENT_ID, PHONE_NUMBER_ID, USER_PHONE_NUMBER)");
+
   env.USER_NAME && !env.USER_NAME.includes("Your ")
     ? pass(`Name: ${env.USER_NAME}`)
     : warn("USER_NAME not set in .env");

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS messages (
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
   content TEXT NOT NULL,
   channel TEXT DEFAULT 'telegram',
+  agent TEXT DEFAULT 'general',
   metadata JSONB DEFAULT '{}',
   embedding VECTOR(1536) -- For semantic search (optional)
 );
@@ -58,16 +59,34 @@ CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level);
 
 -- ============================================================
+-- ACTIONS TABLE (Human-in-the-Loop Queue)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS actions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT NOT NULL,
+  description TEXT NOT NULL,
+  payload JSONB DEFAULT '{}',
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied', 'executed')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  executed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_actions_status ON actions(status);
+CREATE INDEX IF NOT EXISTS idx_actions_created_at ON actions(created_at DESC);
+
+-- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE memory ENABLE ROW LEVEL SECURITY;
 ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE actions ENABLE ROW LEVEL SECURITY;
 
 -- Allow all for service role (your bot uses service key)
 CREATE POLICY "Allow all for service role" ON messages FOR ALL USING (true);
 CREATE POLICY "Allow all for service role" ON memory FOR ALL USING (true);
 CREATE POLICY "Allow all for service role" ON logs FOR ALL USING (true);
+CREATE POLICY "Allow all for service role" ON actions FOR ALL USING (true);
 
 -- ============================================================
 -- HELPER FUNCTIONS

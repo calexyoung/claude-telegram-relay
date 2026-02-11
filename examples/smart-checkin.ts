@@ -14,6 +14,7 @@
 import { spawn } from "bun";
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
+import { initiatePhoneCall, isPhoneAvailable } from "../src/phone";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const CHAT_ID = process.env.TELEGRAM_USER_ID || "";
@@ -101,6 +102,7 @@ async function sendTelegram(message: string): Promise<boolean> {
 
 async function askClaudeToDecide(): Promise<{
   shouldCheckin: boolean;
+  action: "text" | "call" | "skip";
   message: string;
 }> {
   const state = await loadState();
@@ -130,9 +132,11 @@ RULES:
 3. Be brief and helpful, not intrusive
 4. Consider time of day (don't interrupt deep work hours)
 5. If nothing important, respond with NO_CHECKIN
+6. Use ACTION: call ONLY for truly urgent matters (deadline in <1 hour, emergency)${isPhoneAvailable() ? "\n7. Phone calls are available for urgent situations" : ""}
 
 RESPOND IN THIS EXACT FORMAT:
 DECISION: YES or NO
+ACTION: text or call
 MESSAGE: [Your message if YES, or "none" if NO]
 REASON: [Why you decided this]
 `;
@@ -147,20 +151,22 @@ REASON: [Why you decided this]
 
     // Parse Claude's response
     const decisionMatch = output.match(/DECISION:\s*(YES|NO)/i);
+    const actionMatch = output.match(/ACTION:\s*(text|call)/i);
     const messageMatch = output.match(/MESSAGE:\s*(.+?)(?=\nREASON:|$)/is);
     const reasonMatch = output.match(/REASON:\s*(.+)/is);
 
     const shouldCheckin = decisionMatch?.[1]?.toUpperCase() === "YES";
+    const action = (actionMatch?.[1]?.toLowerCase() as "text" | "call") || "text";
     const message = messageMatch?.[1]?.trim() || "";
     const reason = reasonMatch?.[1]?.trim() || "";
 
-    console.log(`Decision: ${shouldCheckin ? "YES" : "NO"}`);
+    console.log(`Decision: ${shouldCheckin ? "YES" : "NO"} (${action})`);
     console.log(`Reason: ${reason}`);
 
-    return { shouldCheckin, message };
+    return { shouldCheckin, action, message };
   } catch (error) {
     console.error("Claude error:", error);
-    return { shouldCheckin: false, message: "" };
+    return { shouldCheckin: false, action: "skip", message: "" };
   }
 }
 
@@ -176,14 +182,29 @@ async function main() {
     process.exit(1);
   }
 
-  const { shouldCheckin, message } = await askClaudeToDecide();
+  const { shouldCheckin, action, message } = await askClaudeToDecide();
 
   if (shouldCheckin && message && message !== "none") {
-    console.log("Sending check-in...");
-    const success = await sendTelegram(message);
+    let success = false;
+
+    if (action === "call" && isPhoneAvailable()) {
+      console.log("Initiating phone call...");
+      const result = await initiatePhoneCall(message);
+      success = result.success;
+      if (success) {
+        // Also send a text summary
+        await sendTelegram(`[Called you about: ${message}]`);
+      } else {
+        // Fall back to text if call fails
+        console.log("Call failed, falling back to text...");
+        success = await sendTelegram(message);
+      }
+    } else {
+      console.log("Sending check-in...");
+      success = await sendTelegram(message);
+    }
 
     if (success) {
-      // Update state
       const state = await loadState();
       state.lastCheckinTime = new Date().toISOString();
       await saveState(state);
