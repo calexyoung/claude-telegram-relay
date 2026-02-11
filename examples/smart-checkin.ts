@@ -15,6 +15,9 @@ import { spawn } from "bun";
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { initiatePhoneCall, isPhoneAvailable } from "../src/phone";
+import { getActiveTasks, formatTasks } from "../src/integrations/notion";
+import { getTodayEvents, formatEvents } from "../src/integrations/calendar";
+import { getMemoryContext } from "../src/memory";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const CHAT_ID = process.env.TELEGRAM_USER_ID || "";
@@ -54,14 +57,36 @@ async function saveState(state: CheckinState): Promise<void> {
 // ============================================================
 
 async function getGoals(): Promise<string[]> {
-  // Load from your persistence layer
-  // Example: Supabase, JSON file, etc.
-  return ["Finish video edit by 5pm", "Review PR"];
+  // Try Notion tasks first
+  try {
+    const tasks = await getActiveTasks();
+    if (tasks.length > 0) {
+      return tasks.map((t) => {
+        const due = t.dueDate ? ` (due ${t.dueDate})` : "";
+        return `${t.title}${due}`;
+      });
+    }
+  } catch { /* fall through */ }
+
+  // Fall back to Supabase memory goals
+  try {
+    const memCtx = await getMemoryContext();
+    const goalLines = memCtx
+      .split("\n")
+      .filter((l) => l.startsWith("- ") && memCtx.includes("ACTIVE GOALS"))
+      .map((l) => l.replace(/^- /, ""));
+    if (goalLines.length > 0) return goalLines;
+  } catch { /* fall through */ }
+
+  return [];
 }
 
 async function getCalendarContext(): Promise<string> {
-  // What's coming up today?
-  return "Next event: Team call in 2 hours";
+  try {
+    const events = await getTodayEvents();
+    if (events.length > 0) return formatEvents(events);
+  } catch { /* fall through */ }
+  return "No calendar data available";
 }
 
 async function getLastActivity(): Promise<string> {
