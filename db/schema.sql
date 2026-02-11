@@ -173,3 +173,52 @@ BEGIN
   LIMIT match_count;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- TOKEN USAGE TABLE (Cost Tracking)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS token_usage (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  agent TEXT DEFAULT 'general',
+  prompt_tokens INT DEFAULT 0,
+  completion_tokens INT DEFAULT 0,
+  total_tokens INT DEFAULT 0,
+  cost_usd DECIMAL(10,6) DEFAULT 0,
+  duration_ms INT,
+  session_id TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_token_usage_created_at ON token_usage(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_token_usage_provider ON token_usage(provider);
+CREATE INDEX IF NOT EXISTS idx_token_usage_agent ON token_usage(agent);
+
+ALTER TABLE token_usage ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for service role" ON token_usage FOR ALL USING (true);
+
+-- ============================================================
+-- MODEL CONFIG TABLE (Per-Agent Model Assignment)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS model_config (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  agent TEXT NOT NULL UNIQUE,
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  enabled BOOLEAN DEFAULT true,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE model_config ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for service role" ON model_config FOR ALL USING (true);
+
+-- Seed default model config for all agents
+INSERT INTO model_config (agent, provider, model) VALUES
+  ('general', 'claude', 'claude-cli'),
+  ('research', 'claude', 'claude-cli'),
+  ('content', 'claude', 'claude-cli'),
+  ('finance', 'claude', 'claude-cli'),
+  ('strategy', 'claude', 'claude-cli'),
+  ('critic', 'claude', 'claude-cli')
+ON CONFLICT (agent) DO NOTHING;

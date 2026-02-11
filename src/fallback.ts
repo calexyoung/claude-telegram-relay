@@ -8,6 +8,7 @@
  */
 
 import { log, logError } from "./logger";
+import { trackTokenUsage, estimateTokens, calculateCost } from "./analytics/token-tracker";
 
 // ============================================================
 // CONFIGURATION
@@ -94,6 +95,20 @@ export async function callOpenRouter(prompt: string): Promise<string> {
     metadata: { model: OPENROUTER_MODEL },
   });
 
+  // Track token usage from API response
+  const usage = (data as any).usage;
+  const promptTokens = usage?.prompt_tokens || estimateTokens(prompt, text).prompt;
+  const completionTokens = usage?.completion_tokens || estimateTokens(prompt, text).completion;
+  trackTokenUsage({
+    provider: "openrouter",
+    model: OPENROUTER_MODEL,
+    promptTokens,
+    completionTokens,
+    totalTokens: promptTokens + completionTokens,
+    costUSD: calculateCost(OPENROUTER_MODEL, promptTokens, completionTokens),
+    durationMs,
+  });
+
   return text;
 }
 
@@ -137,6 +152,18 @@ export async function callOllama(prompt: string): Promise<string> {
   log("ollama_response", `${text.length} chars`, {
     durationMs,
     metadata: { model: OLLAMA_MODEL },
+  });
+
+  // Track token usage (estimated for Ollama)
+  const tokens = estimateTokens(prompt, text);
+  trackTokenUsage({
+    provider: "ollama",
+    model: OLLAMA_MODEL,
+    promptTokens: tokens.prompt,
+    completionTokens: tokens.completion,
+    totalTokens: tokens.total,
+    costUSD: 0,
+    durationMs,
   });
 
   return text;

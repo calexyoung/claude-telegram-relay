@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Relay Dashboard</title>
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>Claude Relay</h1>
+        <div class="version">v1.0.0</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-tab="overview">
+          <span class="icon">&#9632;</span>
+          <span class="nav-label">Overview</span>
+        </div>
+        <div class="nav-item" data-tab="logs">
+          <span class="icon">&#9776;</span>
+          <span class="nav-label">Logs</span>
+        </div>
+        <div class="nav-item" data-tab="errors">
+          <span class="icon">&#9888;</span>
+          <span class="nav-label">Errors</span>
+        </div>
+        <div class="nav-item" data-tab="messages">
+          <span class="icon">&#9993;</span>
+          <span class="nav-label">Messages</span>
+        </div>
+        <div class="nav-item" data-tab="memory">
+          <span class="icon">&#9733;</span>
+          <span class="nav-label">Memory</span>
+        </div>
+        <div class="nav-item" data-tab="actions">
+          <span class="icon">&#9889;</span>
+          <span class="nav-label">Actions</span>
+        </div>
+        <div class="nav-item" data-tab="models">
+          <span class="icon">&#9881;</span>
+          <span class="nav-label">Models & Costs</span>
+        </div>
+        <div class="nav-item" data-tab="services">
+          <span class="icon">&#9851;</span>
+          <span class="nav-label">Services</span>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Connecting...</span>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- ── Overview ──────────────────────────────────── -->
+      <div class="tab-content active" id="tab-overview">
+        <div class="page-header">
+          <h2>Overview</h2>
+          <div class="header-actions">
+            <span class="refresh-info" id="lastRefresh">Auto-refresh: 30s</span>
+          </div>
+        </div>
+
+        <div class="stat-grid" id="statsGrid">
+          <div class="stat-card blue">
+            <div class="label">Messages Today</div>
+            <div class="value" id="statMessages">--</div>
+          </div>
+          <div class="stat-card accent">
+            <div class="label">Active Goals</div>
+            <div class="value" id="statGoals">--</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="label">Pending Actions</div>
+            <div class="value" id="statActions">--</div>
+          </div>
+          <div class="stat-card red">
+            <div class="label">Errors Today</div>
+            <div class="value" id="statErrors">--</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Token Usage (24h)</h3>
+            </div>
+            <div class="panel-body" id="overviewTokens">
+              <div class="loading">Loading</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <h3>System</h3>
+            </div>
+            <div class="panel-body" id="overviewSystem">
+              <div class="loading">Loading</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Recent Logs</h3>
+          </div>
+          <div class="panel-body no-padding" id="overviewLogs">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Logs ──────────────────────────────────────── -->
+      <div class="tab-content" id="tab-logs">
+        <div class="page-header">
+          <h2>Logs</h2>
+          <div class="header-actions filter-bar">
+            <select class="select" id="logLevel">
+              <option value="">All Levels</option>
+              <option value="info">Info</option>
+              <option value="warn">Warning</option>
+              <option value="error">Error</option>
+              <option value="debug">Debug</option>
+            </select>
+            <input type="text" class="input" id="logSearch" placeholder="Search logs..." style="width:200px;">
+            <button class="btn" onclick="loadLogs()">Refresh</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-body no-padding" id="logsContainer">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Errors ────────────────────────────────────── -->
+      <div class="tab-content" id="tab-errors">
+        <div class="page-header">
+          <h2>Errors</h2>
+          <div class="header-actions">
+            <button class="btn" onclick="loadErrors()">Refresh</button>
+          </div>
+        </div>
+
+        <div class="stat-grid" id="errorStats">
+          <div class="stat-card red">
+            <div class="label">Errors (24h)</div>
+            <div class="value" id="errorTotal">--</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="label">Errors/Hour</div>
+            <div class="value" id="errorRate">--</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="panel">
+            <div class="panel-header"><h3>Top Error Events</h3></div>
+            <div class="panel-body no-padding" id="topErrorEvents">
+              <div class="loading">Loading</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h3>Recent Errors</h3></div>
+            <div class="panel-body no-padding" id="recentErrors">
+              <div class="loading">Loading</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Messages ──────────────────────────────────── -->
+      <div class="tab-content" id="tab-messages">
+        <div class="page-header">
+          <h2>Messages</h2>
+          <div class="header-actions filter-bar">
+            <select class="select" id="msgAgent">
+              <option value="">All Agents</option>
+            </select>
+            <button class="btn" onclick="loadMessages()">Refresh</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-body no-padding" id="messagesContainer">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Memory ────────────────────────────────────── -->
+      <div class="tab-content" id="tab-memory">
+        <div class="page-header">
+          <h2>Memory</h2>
+          <div class="header-actions">
+            <button class="btn" onclick="loadMemory()">Refresh</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>Active Goals</h3></div>
+          <div class="panel-body" id="memoryGoals">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="panel">
+            <div class="panel-header"><h3>Facts</h3></div>
+            <div class="panel-body" id="memoryFacts">
+              <div class="loading">Loading</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h3>Preferences</h3></div>
+            <div class="panel-body" id="memoryPrefs">
+              <div class="loading">Loading</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>Completed Goals</h3></div>
+          <div class="panel-body" id="memoryCompleted">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Actions ───────────────────────────────────── -->
+      <div class="tab-content" id="tab-actions">
+        <div class="page-header">
+          <h2>Actions</h2>
+          <div class="header-actions">
+            <button class="btn" onclick="loadActions()">Refresh</button>
+          </div>
+        </div>
+
+        <div class="stat-grid" id="actionStats"></div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>Pending Actions</h3></div>
+          <div class="panel-body no-padding" id="pendingActions">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>Action History</h3></div>
+          <div class="panel-body no-padding" id="actionHistory">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Models & Costs ────────────────────────────── -->
+      <div class="tab-content" id="tab-models">
+        <div class="page-header">
+          <h2>Models & Costs</h2>
+          <div class="header-actions filter-bar">
+            <select class="select" id="tokenRange" onchange="loadTokenStats()">
+              <option value="24h">Last 24 Hours</option>
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+            </select>
+            <select class="select" id="costPeriod" onchange="loadCostTimeline()">
+              <option value="day">Daily</option>
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+            </select>
+            <button class="btn" onclick="loadModelsPage()">Refresh</button>
+          </div>
+        </div>
+
+        <div class="stat-grid" id="tokenStatCards"></div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>Model Assignment</h3></div>
+          <div class="panel-body no-padding" id="modelAssignment">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>Cost Timeline</h3></div>
+          <div class="panel-body" id="costTimeline">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>Token Breakdown</h3></div>
+          <div class="panel-body" id="tokenBreakdown">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Services ──────────────────────────────────── -->
+      <div class="tab-content" id="tab-services">
+        <div class="page-header">
+          <h2>Services</h2>
+          <div class="header-actions">
+            <button class="btn" onclick="loadServices()">Refresh</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>Bot Configuration</h3></div>
+          <div class="panel-body" id="botConfig">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>Integrations</h3></div>
+          <div class="panel-body" id="integrations">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>Agents</h3></div>
+          <div class="panel-body no-padding" id="agentsList">
+            <div class="loading">Loading</div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>

@@ -31,6 +31,22 @@ import {
   type AgentSlug,
 } from "./agents/registry";
 import { runBoardMeeting } from "./agents/orchestrator";
+import { trackTokenUsage, estimateTokens, calculateCost } from "./analytics/token-tracker";
+import { getModelForAgent, type ModelConfig } from "./models/manager";
+import { callOpenRouter, callOllama } from "./fallback";
+import {
+  getStats,
+  getLogs,
+  getErrors,
+  getMessages,
+  getMemory,
+  getActions,
+  getTokenStats,
+  getCostTimeline,
+  getModels,
+  updateModel,
+  getServices,
+} from "./dashboard/api";
 
 const PROJECT_ROOT = dirname(dirname(import.meta.path));
 
@@ -262,17 +278,55 @@ async function callClaudeCLI(
     metadata: options?.agentSlug ? { agent: options.agentSlug } : undefined,
   });
 
+  // Track token usage (estimated for CLI)
+  const tokens = estimateTokens(prompt, output);
+  trackTokenUsage({
+    provider: "claude",
+    model: "claude-cli",
+    agent: options?.agentSlug || "general",
+    promptTokens: tokens.prompt,
+    completionTokens: tokens.completion,
+    totalTokens: tokens.total,
+    costUSD: 0,
+    durationMs,
+    sessionId: currentSessionId || undefined,
+  });
+
   return output.trim();
 }
 
 /**
- * Call Claude CLI with automatic fallback to OpenRouter/Ollama on failure.
+ * Call the configured AI provider for an agent.
+ * Checks model_config table to route to claude/openrouter/ollama per agent.
+ * Falls back through the chain on failure.
  */
 async function callClaude(
   prompt: string,
   options?: { resume?: boolean; imagePath?: string; agentSlug?: string }
 ): Promise<string> {
-  // Try Claude CLI first
+  // Check model assignment for this agent
+  const modelConfig = await getModelForAgent(options?.agentSlug || "general");
+
+  // Route to configured provider
+  if (modelConfig.provider === "openrouter") {
+    try {
+      const result = await callOpenRouter(prompt);
+      lastProvider = "openrouter";
+      return result;
+    } catch (error) {
+      logError("model_route_error", `OpenRouter failed for ${modelConfig.agent}, falling back to Claude`, error);
+    }
+  } else if (modelConfig.provider === "ollama") {
+    try {
+      const result = await callOllama(prompt);
+      lastProvider = "ollama";
+      return result;
+    } catch (error) {
+      logError("model_route_error", `Ollama failed for ${modelConfig.agent}, falling back to Claude`, error);
+    }
+  }
+
+  // Try Claude CLI (default or fallback from above)
   try {
     const result = await callClaudeCLI(prompt, options);
     lastProvider = "claude";
@@ -859,11 +913,24 @@ async function sendResponse(ctx: Context, response: string): Promise<void> {
 const HEALTH_PORT = parseInt(process.env.HEALTH_PORT || "3000");
 const botStartTime = Date.now();
 
+const STATIC_DIR = join(PROJECT_ROOT, "src", "dashboard", "static");
+const MIME_TYPES: Record<string, string> = {
+  ".html": "text/html",
+  ".css": "text/css",
+  ".js": "application/javascript",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+};
+
 Bun.serve({
   port: HEALTH_PORT,
-  fetch(req) {
+  async fetch(req) {
     const url = new URL(req.url);
-    if (url.pathname === "/health") {
+    const path = url.pathname;
+
+    // ── Health check ──
+    if (path === "/health") {
       const mem = process.memoryUsage();
       return new Response(
         JSON.stringify({
@@ -891,6 +958,101 @@ Bun.serve({
         { headers: { "Content-Type": "application/json" } }
       );
     }
+
+    // ── Dashboard API ──
+    if (path.startsWith("/api/dashboard/")) {
+      const route = path.replace("/api/dashboard/", "");
+      const corsHeaders = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      };
+
+      try {
+        let result: unknown;
+
+        switch (route) {
+          case "stats":
+            result = await getStats();
+            break;
+          case "logs":
+            result = await getLogs(url.searchParams);
+            break;
+          case "errors":
+            result = await getErrors();
+            break;
+          case "messages":
+            result = await getMessages(url.searchParams);
+            break;
+          case "memory":
+            result = await getMemory(url.searchParams);
+            break;
+          case "actions":
+            result = await getActions(url.searchParams);
+            break;
+          case "tokens":
+            result = await getTokenStats(url.searchParams);
+            break;
+          case "costs":
+            result = await getCostTimeline(url.searchParams);
+            break;
+          case "models":
+            if (req.method === "POST") {
+              const body = await req.json();
+              result = await updateModel(body);
+            } else {
+              result = await getModels();
+            }
+            break;
+          case "services":
+            result = getServices();
+            break;
+          case "health":
+            result = {
+              uptime: Math.floor((Date.now() - botStartTime) / 1000),
+              version: "1.0.0",
+              lastMessageAt,
+              memory: process.memoryUsage(),
+            };
+            break;
+          default:
+            return new Response(JSON.stringify({ error: "Not found" }), {
+              status: 404,
+              headers: corsHeaders,
+            });
+        }
+
+        return new Response(JSON.stringify(result), { headers: corsHeaders });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Internal error";
+        return new Response(JSON.stringify({ error: message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // ── Dashboard static files ──
+    if (path === "/" || path === "/dashboard") {
+      const file = Bun.file(join(STATIC_DIR, "index.html"));
+      if (await file.exists()) {
+        return new Response(file, { headers: { "Content-Type": "text/html" } });
+      }
+    }
+
+    if (path.startsWith("/static/")) {
+      const fileName = path.replace("/static/", "");
+      // Prevent path traversal
+      if (fileName.includes("..")) {
+        return new Response("Forbidden", { status: 403 });
+      }
+      const file = Bun.file(join(STATIC_DIR, fileName));
+      if (await file.exists()) {
+        const ext = "." + fileName.split(".").pop();
+        const contentType = MIME_TYPES[ext] || "application/octet-stream";
+        return new Response(file, { headers: { "Content-Type": contentType } });
+      }
+    }
+
     return new Response("Not found", { status: 404 });
   },
 });

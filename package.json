@@ -12,7 +12,8 @@
     "setup:services": "bun run setup/configure-services.ts",
     "setup:verify": "bun run setup/verify.ts",
     "setup:uninstall": "bun run setup/uninstall.ts",
-    "watchdog": "bun run src/watchdog.ts"
+    "watchdog": "bun run src/watchdog.ts",
+    "dashboard": "echo 'Dashboard is served at http://localhost:3000 when the bot is running'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
