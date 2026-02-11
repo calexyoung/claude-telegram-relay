@@ -1,0 +1,41 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            export PATH="$HOME/.bun/bin:$HOME/.npm-global/bin:/usr/local/bin:$PATH"
+            cd ~/apps/telegram-bot
+            bash deploy/deploy.sh
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            HEALTH_PORT="${HEALTH_PORT:-3000}"
+            STATUS=$(curl -sf "http://localhost:${HEALTH_PORT}/health" | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" 2>/dev/null || echo "failed")
+            if [ "$STATUS" = "ok" ]; then
+              echo "Deployment verified: health check OK"
+            else
+              echo "WARNING: Health check returned: $STATUS"
+              exit 1
+            fi
