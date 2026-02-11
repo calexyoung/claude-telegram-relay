@@ -33,8 +33,7 @@ module.exports = {
     {
       name: "telegram-bot",
       interpreter: BUN,
-      script: "run",
-      args: "src/relay.ts",
+      script: "src/relay.ts",
       cwd: APP_DIR,
       autorestart: true,
       max_restarts: 10,
@@ -60,8 +59,7 @@ module.exports = {
     {
       name: "smart-checkin",
       interpreter: BUN,
-      script: "run",
-      args: "examples/smart-checkin.ts",
+      script: "examples/smart-checkin.ts",
       cwd: APP_DIR,
       autorestart: false, // cron handles scheduling
       cron_restart: "*/30 9-18 * * *", // Every 30 min, 9am-6pm
@@ -79,8 +77,7 @@ module.exports = {
     {
       name: "morning-briefing",
       interpreter: BUN,
-      script: "run",
-      args: "examples/morning-briefing.ts",
+      script: "examples/morning-briefing.ts",
       cwd: APP_DIR,
       autorestart: false, // cron handles scheduling
       cron_restart: "0 9 * * *", // Daily at 9am
@@ -98,8 +95,7 @@ module.exports = {
     {
       name: "watchdog",
       interpreter: BUN,
-      script: "run",
-      args: "src/watchdog.ts",
+      script: "src/watchdog.ts",
       cwd: APP_DIR,
       autorestart: true,
       max_restarts: 5,
