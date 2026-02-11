@@ -506,6 +506,103 @@ export function taskRestore(body: { index: number; toColumn?: string }) {
   return { ok: true };
 }
 
+// ── Vitals ───────────────────────────────────────────────────
+
+export function updateVitals(body: { mood?: number; energy?: number; sleep?: string; focus?: string }) {
+  const data = readJSON(DATA_FILE);
+  if (body.mood !== undefined) data.mood = Math.max(1, Math.min(10, Number(body.mood)));
+  if (body.energy !== undefined) data.energy = Math.max(1, Math.min(10, Number(body.energy)));
+  if (body.sleep !== undefined) data.sleep = String(body.sleep);
+  if (body.focus !== undefined) data.focus = String(body.focus);
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+// ── ADHD Focus ──────────────────────────────────────────────
+
+export function updateAdhd(body: { label?: string; title?: string; description?: string; strategy?: string }) {
+  const data = readJSON(DATA_FILE);
+  if (!data.adhdFocus) data.adhdFocus = {};
+  if (body.label !== undefined) data.adhdFocus.label = String(body.label);
+  if (body.title !== undefined) data.adhdFocus.title = String(body.title);
+  if (body.description !== undefined) data.adhdFocus.description = String(body.description);
+  if (body.strategy !== undefined) data.adhdFocus.strategy = String(body.strategy);
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+// ── Schedule ────────────────────────────────────────────────
+
+export function updateScheduleItem(body: { index: number; time?: string; event?: string }) {
+  const data = readJSON(DATA_FILE);
+  if (!data.schedule?.[body.index]) throw new Error("Schedule item not found");
+  if (body.time !== undefined) data.schedule[body.index].time = String(body.time);
+  if (body.event !== undefined) data.schedule[body.index].event = String(body.event);
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+export function addScheduleItem(body: { time: string; event: string }) {
+  const data = readJSON(DATA_FILE);
+  if (!data.schedule) data.schedule = [];
+  data.schedule.push({ time: body.time || "", event: body.event || "" });
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+export function deleteScheduleItem(body: { index: number }) {
+  const data = readJSON(DATA_FILE);
+  if (!data.schedule?.[body.index]) throw new Error("Schedule item not found");
+  data.schedule.splice(body.index, 1);
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+export function reorderScheduleItem(body: { fromIndex: number; toIndex: number }) {
+  const data = readJSON(DATA_FILE);
+  if (!data.schedule?.[body.fromIndex]) throw new Error("Schedule item not found");
+  const to = Math.max(0, Math.min(data.schedule.length - 1, body.toIndex));
+  const [item] = data.schedule.splice(body.fromIndex, 1);
+  data.schedule.splice(to, 0, item);
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+// ── Habits ──────────────────────────────────────────────────
+
+export function toggleHabit(body: { habitIndex: number; dayIndex: number }) {
+  const data = readJSON(DATA_FILE);
+  if (!data.habits?.data?.[body.habitIndex]) throw new Error("Habit not found");
+  const row = data.habits.data[body.habitIndex];
+  if (body.dayIndex < 0 || body.dayIndex >= row.length) throw new Error("Day index out of range");
+  const current = row[body.dayIndex];
+  // Cycle: true → false → null → true
+  if (current === true) row[body.dayIndex] = false;
+  else if (current === false) row[body.dayIndex] = null;
+  else row[body.dayIndex] = true;
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+export function addHabit(body: { label: string }) {
+  const data = readJSON(DATA_FILE);
+  if (!data.habits) data.habits = { labels: [], days: [], data: [] };
+  data.habits.labels.push(String(body.label));
+  const cols = data.habits.data.length > 0 ? data.habits.data[0].length : 7;
+  data.habits.data.push(new Array(cols).fill(null));
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+export function deleteHabit(body: { index: number }) {
+  const data = readJSON(DATA_FILE);
+  if (!data.habits?.labels?.[body.index]) throw new Error("Habit not found");
+  data.habits.labels.splice(body.index, 1);
+  data.habits.data.splice(body.index, 1);
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
 // ══════════════════════════════════════════════════════════════
 // ── Projects (Obsidian Vault Parser) ────────────────────────
 // ══════════════════════════════════════════════════════════════

@@ -56,6 +56,15 @@ import {
   taskMove,
   taskTrash,
   taskRestore,
+  updateVitals,
+  updateAdhd,
+  updateScheduleItem,
+  addScheduleItem,
+  deleteScheduleItem,
+  reorderScheduleItem,
+  toggleHabit,
+  addHabit,
+  deleteHabit,
   getAllProjects,
   getProjectDetail,
 } from "./dashboard/api";
@@ -1057,6 +1066,34 @@ Bun.serve({
             break;
           case "task/restore":
             result = taskRestore(await req.json());
+            break;
+          // ── Vitals / ADHD / Schedule / Habits ──
+          case "vitals/update":
+            result = updateVitals(await req.json());
+            break;
+          case "adhd/update":
+            result = updateAdhd(await req.json());
+            break;
+          case "schedule/update":
+            result = updateScheduleItem(await req.json());
+            break;
+          case "schedule/add":
+            result = addScheduleItem(await req.json());
+            break;
+          case "schedule/delete":
+            result = deleteScheduleItem(await req.json());
+            break;
+          case "schedule/reorder":
+            result = reorderScheduleItem(await req.json());
+            break;
+          case "habits/toggle":
+            result = toggleHabit(await req.json());
+            break;
+          case "habits/add":
+            result = addHabit(await req.json());
+            break;
+          case "habits/delete":
+            result = deleteHabit(await req.json());
             break;
           // ── Projects ──
           case "projects":

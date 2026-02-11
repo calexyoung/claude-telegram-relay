@@ -231,49 +231,58 @@ function renderWeather(w) {
 }
 
 function renderDailyContent(d) {
-  // Metrics
+  // Metrics — clickable for inline edit
   const metricsEl = document.getElementById("dailyMetrics");
   if (metricsEl) {
     metricsEl.innerHTML = `
       <div class="daily-metric">
-        <div class="daily-metric-circle" style="border-color:${moodColor(d.mood)};color:${moodColor(d.mood)}">${d.mood}</div>
+        <div class="daily-metric-circle editable" onclick="openNumberPicker(this,'mood',${d.mood})" style="border-color:${moodColor(d.mood)};color:${moodColor(d.mood)}">${d.mood}</div>
         <div class="daily-metric-label">Mood</div>
       </div>
       <div class="daily-metric">
-        <div class="daily-metric-circle" style="border-color:${moodColor(d.energy)};color:${moodColor(d.energy)}">${d.energy}</div>
+        <div class="daily-metric-circle editable" onclick="openNumberPicker(this,'energy',${d.energy})" style="border-color:${moodColor(d.energy)};color:${moodColor(d.energy)}">${d.energy}</div>
         <div class="daily-metric-label">Energy</div>
       </div>
     `;
   }
 
   const sleepEl = document.getElementById("dailySleep");
-  if (sleepEl) sleepEl.textContent = "\u{1F4A4} " + (d.sleep || "--");
+  if (sleepEl) {
+    sleepEl.innerHTML = `<span class="editable" onclick="inlineEditField(this,'sleep',${JSON.stringify(d.sleep || "").replace(/"/g, '&quot;')})">\u{1F4A4} ${escapeHtml(d.sleep || "--")}</span>`;
+  }
 
   const focusEl = document.getElementById("dailyFocusText");
-  if (focusEl) focusEl.textContent = d.focus || "";
+  if (focusEl) {
+    focusEl.innerHTML = `<span class="editable" onclick="inlineEditField(this,'focus',${JSON.stringify(d.focus || "").replace(/"/g, '&quot;')})">${escapeHtml(d.focus || "(click to set)")}</span>`;
+  }
 
-  // ADHD Focus
+  // ADHD Focus — editable fields
   const adhdEl = document.getElementById("dailyAdhd");
   if (adhdEl && d.adhdFocus) {
     const af = d.adhdFocus;
     adhdEl.innerHTML = `
       <span class="daily-adhd-day">Day ${af.day}/${af.total}</span>
-      <span class="daily-adhd-label">${escapeHtml(af.label)}</span>
-      <div class="daily-adhd-title">${escapeHtml(af.title)}</div>
-      <div class="daily-adhd-desc">${escapeHtml(af.description)}</div>
-      <div class="daily-adhd-strategy">\u{1F4A1} ${escapeHtml(af.strategy)}</div>
+      <span class="daily-adhd-label editable" onclick="inlineEditAdhd(this,'label',${JSON.stringify(af.label || "").replace(/"/g, '&quot;')})">${escapeHtml(af.label)}</span>
+      <div class="daily-adhd-title editable" onclick="inlineEditAdhd(this,'title',${JSON.stringify(af.title || "").replace(/"/g, '&quot;')})">${escapeHtml(af.title)}</div>
+      <div class="daily-adhd-desc editable" onclick="inlineEditAdhd(this,'description',${JSON.stringify(af.description || "").replace(/"/g, '&quot;')})">${escapeHtml(af.description)}</div>
+      <div class="daily-adhd-strategy editable" onclick="inlineEditAdhd(this,'strategy',${JSON.stringify(af.strategy || "").replace(/"/g, '&quot;')})">\u{1F4A1} ${escapeHtml(af.strategy)}</div>
     `;
   }
 
-  // Schedule
+  // Schedule — editable with add/delete
   const schedEl = document.getElementById("dailySchedule");
   if (schedEl && d.schedule) {
     schedEl.innerHTML = d.schedule.map((s, i) => `
       <div class="daily-schedule-item${i === 0 ? " next" : ""}">
-        <div class="daily-schedule-time">${i === 0 ? '<span class="daily-next-badge">NEXT</span>' : ""}${escapeHtml(s.time)}</div>
-        <div class="daily-schedule-event">${escapeHtml(s.event)}</div>
+        <div class="daily-schedule-time editable" onclick="inlineEditSchedule(this,${i},'time',${JSON.stringify(s.time).replace(/"/g, '&quot;')})">${i === 0 ? '<span class="daily-next-badge">NEXT</span>' : ""}${escapeHtml(s.time)}</div>
+        <div class="daily-schedule-event editable" onclick="inlineEditSchedule(this,${i},'event',${JSON.stringify(s.event).replace(/"/g, '&quot;')})">${escapeHtml(s.event)}</div>
+        <div class="schedule-item-actions">
+          ${i > 0 ? `<button class="schedule-action-btn" onclick="scheduleReorder(${i},${i - 1})" title="Move up">\u2191</button>` : ""}
+          ${i < d.schedule.length - 1 ? `<button class="schedule-action-btn" onclick="scheduleReorder(${i},${i + 1})" title="Move down">\u2193</button>` : ""}
+          <button class="schedule-action-btn delete" onclick="scheduleDelete(${i})" title="Delete">\u00D7</button>
+        </div>
       </div>
-    `).join("");
+    `).join("") + `<button class="add-btn" onclick="scheduleAdd()">+ Add Item</button>`;
   }
 
   // Tasks Kanban
@@ -359,15 +368,16 @@ function renderHabits(d) {
     day.setDate(today.getDate() - i);
     dayHeaders.push(`<div class="daily-habit-header">${day.toLocaleDateString("en-US", { weekday: "short" })}</div>`);
   }
-  let html = `<div class="daily-habit-row"><div></div>${dayHeaders.join("")}</div>`;
+  let html = `<div class="daily-habit-row"><div></div>${dayHeaders.join("")}<div></div></div>`;
   h.labels.forEach((label, i) => {
-    const cells = h.data[i].map((v) => {
-      if (v === true) return '<div class="daily-habit-cell yes">\u2713</div>';
-      if (v === false) return '<div class="daily-habit-cell no">\u2717</div>';
-      return '<div class="daily-habit-cell na">\u2014</div>';
+    const cells = h.data[i].map((v, j) => {
+      const cls = v === true ? "yes" : v === false ? "no" : "na";
+      const sym = v === true ? "\u2713" : v === false ? "\u2717" : "\u2014";
+      return `<div class="daily-habit-cell ${cls} clickable" onclick="habitToggle(${i},${j})">${sym}</div>`;
     }).join("");
-    html += `<div class="daily-habit-row"><div class="daily-habit-label">${escapeHtml(label)}</div>${cells}</div>`;
+    html += `<div class="daily-habit-row"><div class="daily-habit-label">${escapeHtml(label)}</div>${cells}<button class="habit-delete-btn" onclick="habitDelete(${i})" title="Delete habit">\u00D7</button></div>`;
   });
+  html += `<button class="add-btn" onclick="habitAdd()" style="margin-top:8px">+ New Habit</button>`;
   el.innerHTML = html;
 }
 
@@ -906,6 +916,183 @@ async function loadServices() {
 
 function serviceCard(name, enabled, icon) {
   return `<div class="service-item"><div class="service-icon ${enabled ? "on" : "off"}">${icon}</div><div class="service-info"><div class="service-name">${name}</div><div class="service-status">${enabled ? "Active" : "Not configured"}</div></div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── Inline Edit Controls ────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+// Number picker for mood/energy
+function openNumberPicker(el, field, current) {
+  // Remove any existing picker
+  closeNumberPicker();
+  const picker = document.createElement("div");
+  picker.className = "number-picker";
+  picker.id = "activeNumberPicker";
+  for (let i = 1; i <= 10; i++) {
+    const btn = document.createElement("button");
+    btn.textContent = i;
+    btn.className = "number-picker-btn" + (i === current ? " active" : "");
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      await api("vitals/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: i }) });
+      closeNumberPicker();
+      loadDaily();
+    };
+    picker.appendChild(btn);
+  }
+  // Position near the clicked circle
+  el.style.position = "relative";
+  el.appendChild(picker);
+  // Close on outside click
+  setTimeout(() => document.addEventListener("click", closeNumberPickerOutside), 0);
+}
+
+function closeNumberPicker() {
+  const el = document.getElementById("activeNumberPicker");
+  if (el) el.remove();
+  document.removeEventListener("click", closeNumberPickerOutside);
+}
+
+function closeNumberPickerOutside(e) {
+  const picker = document.getElementById("activeNumberPicker");
+  if (picker && !picker.contains(e.target)) closeNumberPicker();
+}
+
+// Inline text edit for vitals (sleep, focus)
+function inlineEditField(el, field, currentValue) {
+  if (el.querySelector(".inline-edit-input")) return;
+  const isTextarea = field === "focus";
+  const tag = isTextarea ? "textarea" : "input";
+  const input = document.createElement(tag);
+  input.className = "inline-edit-input";
+  input.value = currentValue;
+  if (isTextarea) { input.rows = 2; }
+  el.textContent = "";
+  el.appendChild(input);
+  input.focus();
+  input.select();
+
+  async function save() {
+    const val = input.value.trim();
+    if (val !== currentValue) {
+      await api("vitals/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: val }) });
+    }
+    loadDaily();
+  }
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); save(); }
+    if (e.key === "Escape") loadDaily();
+  });
+  input.addEventListener("blur", save);
+}
+
+// Inline edit for ADHD fields
+function inlineEditAdhd(el, field, currentValue) {
+  if (el.querySelector(".inline-edit-input")) return;
+  const isLong = field === "description" || field === "strategy";
+  const tag = isLong ? "textarea" : "input";
+  const input = document.createElement(tag);
+  input.className = "inline-edit-input";
+  input.value = currentValue;
+  if (isLong) { input.rows = 3; }
+  el.textContent = "";
+  el.appendChild(input);
+  input.focus();
+  input.select();
+
+  async function save() {
+    const val = input.value.trim();
+    if (val !== currentValue) {
+      await api("adhd/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: val }) });
+    }
+    loadDaily();
+  }
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); save(); }
+    if (e.key === "Escape") loadDaily();
+  });
+  input.addEventListener("blur", save);
+}
+
+// Inline edit for schedule items
+function inlineEditSchedule(el, index, field, currentValue) {
+  if (el.querySelector(".inline-edit-input")) return;
+  const input = document.createElement("input");
+  input.className = "inline-edit-input";
+  input.value = currentValue;
+  // Preserve the NEXT badge if it's in the time field at index 0
+  el.textContent = "";
+  el.appendChild(input);
+  input.focus();
+  input.select();
+
+  async function save() {
+    const val = input.value.trim();
+    if (val !== currentValue) {
+      await api("schedule/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index, [field]: val }) });
+    }
+    loadDaily();
+  }
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); save(); }
+    if (e.key === "Escape") loadDaily();
+  });
+  input.addEventListener("blur", save);
+}
+
+async function scheduleAdd() {
+  await api("schedule/add", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ time: "Time", event: "New event" }) });
+  loadDaily();
+}
+
+async function scheduleDelete(index) {
+  await api("schedule/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index }) });
+  loadDaily();
+}
+
+async function scheduleReorder(fromIndex, toIndex) {
+  await api("schedule/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fromIndex, toIndex }) });
+  loadDaily();
+}
+
+// Habit toggle (cycle: true → false → null → true)
+async function habitToggle(habitIndex, dayIndex) {
+  await api("habits/toggle", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ habitIndex, dayIndex }) });
+  loadDaily();
+}
+
+function habitAdd() {
+  const existing = document.getElementById("habitAddInput");
+  if (existing) { existing.focus(); return; }
+  const container = document.getElementById("dailyHabits");
+  const wrapper = document.createElement("div");
+  wrapper.className = "habit-add-form";
+  const input = document.createElement("input");
+  input.id = "habitAddInput";
+  input.className = "inline-edit-input";
+  input.placeholder = "Habit name...";
+  wrapper.appendChild(input);
+  container.appendChild(wrapper);
+  input.focus();
+
+  async function save() {
+    const val = input.value.trim();
+    if (val) {
+      await api("habits/add", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: val }) });
+    }
+    loadDaily();
+  }
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); save(); }
+    if (e.key === "Escape") loadDaily();
+  });
+  input.addEventListener("blur", save);
+}
+
+async function habitDelete(index) {
+  await api("habits/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index }) });
+  loadDaily();
 }
 
 // ── Auto-refresh ────────────────────────────────────────────
