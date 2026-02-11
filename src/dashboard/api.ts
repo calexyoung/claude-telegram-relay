@@ -3,6 +3,8 @@
  *
  * Handles all /api/dashboard/* endpoints.
  * Queries Supabase and returns JSON responses.
+ * Includes Daily dashboard (data.json, weather, captures, tasks)
+ * and Projects (Obsidian vault parser).
  */
 
 import { getSupabase } from "../supabase";
@@ -12,6 +14,22 @@ import { isPhoneAvailable } from "../phone";
 import { isFallbackEnabled } from "../fallback";
 import { getAllModelConfigs, setModelForAgent } from "../models/manager";
 import { getAvailableModels } from "../analytics/token-tracker";
+import { join } from "path";
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "fs";
+
+// ── Daily/Projects Constants ────────────────────────────────
+const DATA_DIR = join(import.meta.dir, "../../data");
+const DATA_FILE = join(DATA_DIR, "data.json");
+const CAPTURES_FILE = join(DATA_DIR, "captures.json");
+const PROJECTS_DIR = process.env.OBSIDIAN_PROJECTS_DIR || "/home/clawdbot/obsidian-vault/Projects";
+
+// Weather cache (30 minutes)
+let weatherCache: { data: any; timestamp: number } = { data: null, timestamp: 0 };
+const WEATHER_CACHE_MS = 30 * 60 * 1000;
+
+// Projects cache (60 seconds)
+let projectsCache: { data: any; timestamp: number } = { data: null, timestamp: 0 };
+const PROJECTS_CACHE_MS = 60 * 1000;
 
 // ── Stats ────────────────────────────────────────────────────
 
@@ -334,4 +352,308 @@ export function getServices() {
       topicId: a.topicId || null,
     })),
   };
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── Daily Dashboard ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+function readJSON(file: string): any {
+  try {
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    return file === CAPTURES_FILE ? [] : {};
+  }
+}
+
+function writeJSON(file: string, data: any): void {
+  writeFileSync(file, JSON.stringify(data, null, 2));
+}
+
+export function getDaily() {
+  return readJSON(DATA_FILE);
+}
+
+const WMO_CONDITIONS: Record<number, string> = {
+  0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+  45: "Fog", 48: "Rime fog",
+  51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
+  61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
+  71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow",
+  80: "Slight showers", 81: "Moderate showers", 82: "Violent showers",
+  95: "Thunderstorm", 96: "Thunderstorm w/ hail", 99: "Thunderstorm w/ heavy hail",
+};
+
+const WMO_TO_ICON: Record<number, string> = {
+  0: "113", 1: "113", 2: "116", 3: "122",
+  45: "143", 48: "143",
+  51: "176", 53: "176", 55: "296",
+  61: "296", 63: "302", 65: "308",
+  71: "179", 73: "329", 75: "338",
+  80: "176", 81: "302", 82: "308",
+  95: "200", 96: "200", 99: "200",
+};
+
+export async function getWeather() {
+  const now = Date.now();
+  if (weatherCache.data && (now - weatherCache.timestamp) < WEATHER_CACHE_MS) {
+    return weatherCache.data;
+  }
+  try {
+    const apiUrl = "https://api.open-meteo.com/v1/forecast?latitude=39.40&longitude=-76.60&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=mph";
+    const res = await fetch(apiUrl);
+    const weatherRes = await res.json();
+    const cur = weatherRes.current || {};
+    const tempF = Math.round(cur.temperature_2m || 0);
+    const tempC = Math.round((tempF - 32) * 5 / 9);
+    const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+    const windDeg = cur.wind_direction_10m || 0;
+    const windDir = dirs[Math.round(windDeg / 22.5) % 16];
+    const code = cur.weather_code ?? 0;
+    const weather = {
+      temp_F: String(tempF),
+      temp_C: String(tempC),
+      condition: WMO_CONDITIONS[code] || "Unknown",
+      humidity: String(cur.relative_humidity_2m || "--"),
+      windMph: String(Math.round(cur.wind_speed_10m || 0)),
+      windDir,
+      icon: WMO_TO_ICON[code] || "116",
+    };
+    weatherCache = { data: weather, timestamp: now };
+    return weather;
+  } catch {
+    if (weatherCache.data) return weatherCache.data;
+    return { error: "Weather unavailable" };
+  }
+}
+
+export function getCaptures() {
+  return readJSON(CAPTURES_FILE);
+}
+
+export function addCapture(body: { text: string }) {
+  const captures = readJSON(CAPTURES_FILE);
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  captures.push({ text: body.text, timestamp: new Date().toISOString(), id });
+  writeJSON(CAPTURES_FILE, captures);
+  return { ok: true, id };
+}
+
+export function deleteCapture(body: { id: string }) {
+  let captures = readJSON(CAPTURES_FILE);
+  captures = captures.filter((c: any) => c.id !== body.id);
+  writeJSON(CAPTURES_FILE, captures);
+  return { ok: true };
+}
+
+export function moveCapture(body: { id: string; column: string }) {
+  const validCols = ["today", "thisWeek", "nextWeek", "later", "noDate"];
+  if (!validCols.includes(body.column)) throw new Error("Invalid column");
+  let captures = readJSON(CAPTURES_FILE);
+  const capture = captures.find((c: any) => c.id === body.id);
+  if (!capture) throw new Error("Capture not found");
+  captures = captures.filter((c: any) => c.id !== body.id);
+  writeJSON(CAPTURES_FILE, captures);
+  const data = readJSON(DATA_FILE);
+  if (!data.tasks) data.tasks = {};
+  if (!data.tasks[body.column]) data.tasks[body.column] = [];
+  data.tasks[body.column].push(capture.text);
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+export function taskDone(body: { column: string; index: number }) {
+  const data = readJSON(DATA_FILE);
+  if (!data.tasks?.[body.column]?.[body.index]) throw new Error("Task not found");
+  const task = data.tasks[body.column].splice(body.index, 1)[0];
+  if (!data.tasks.done) data.tasks.done = [];
+  data.tasks.done.push({ text: task, completedAt: new Date().toISOString(), from: body.column });
+  writeJSON(DATA_FILE, data);
+  return { ok: true, task };
+}
+
+export function taskMove(body: { fromColumn: string; index: number; toColumn: string }) {
+  const validCols = ["today", "thisWeek", "nextWeek", "later", "noDate"];
+  if (!validCols.includes(body.fromColumn) || !validCols.includes(body.toColumn)) throw new Error("Invalid column");
+  const data = readJSON(DATA_FILE);
+  if (!data.tasks?.[body.fromColumn]?.[body.index]) throw new Error("Task not found");
+  const task = data.tasks[body.fromColumn].splice(body.index, 1)[0];
+  if (!data.tasks[body.toColumn]) data.tasks[body.toColumn] = [];
+  data.tasks[body.toColumn].push(task);
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+export function taskTrash(body: { column: string; index: number }) {
+  const data = readJSON(DATA_FILE);
+  if (!data.tasks?.[body.column]?.[body.index]) throw new Error("Task not found");
+  const task = data.tasks[body.column].splice(body.index, 1)[0];
+  if (!data.tasks.trash) data.tasks.trash = [];
+  data.tasks.trash.push({ text: task, trashedAt: new Date().toISOString(), from: body.column });
+  writeJSON(DATA_FILE, data);
+  return { ok: true, task };
+}
+
+export function taskRestore(body: { index: number; toColumn?: string }) {
+  const validCols = ["today", "thisWeek", "nextWeek", "later", "noDate"];
+  const col = body.toColumn && validCols.includes(body.toColumn) ? body.toColumn : "today";
+  const data = readJSON(DATA_FILE);
+  if (!data.tasks?.trash?.[body.index]) throw new Error("Trash item not found");
+  const item = data.tasks.trash.splice(body.index, 1)[0];
+  if (!data.tasks[col]) data.tasks[col] = [];
+  data.tasks[col].push(item.text);
+  writeJSON(DATA_FILE, data);
+  return { ok: true };
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── Projects (Obsidian Vault Parser) ────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+function parseFrontmatter(content: string): { frontmatter: Record<string, any>; body: string } {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!match) return { frontmatter: {}, body: content };
+  const raw = match[1];
+  const body = content.slice(match[0].length).trim();
+  const frontmatter: Record<string, any> = {};
+  for (const line of raw.split("\n")) {
+    const idx = line.indexOf(":");
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).trim();
+    let val: any = line.slice(idx + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    val = val.replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g, "$1");
+    if (val === "" || val === "null") val = null;
+    frontmatter[key] = val;
+  }
+  return { frontmatter, body };
+}
+
+function parseCheckboxes(body: string) {
+  const lines = body.split("\n");
+  const sections: { name: string; todos: { text: string; done: boolean }[] }[] = [];
+  let currentSection: { name: string; todos: { text: string; done: boolean }[] } | null = null;
+  const topLevelTodos: { text: string; done: boolean }[] = [];
+  for (const line of lines) {
+    const headingMatch = line.match(/^##\s+(.+)/);
+    if (headingMatch) {
+      currentSection = { name: headingMatch[1].trim(), todos: [] };
+      sections.push(currentSection);
+      continue;
+    }
+    const checkMatch = line.match(/^[-*]\s+\[([ xX])\]\s+(.+)/);
+    if (checkMatch) {
+      const todo = { text: checkMatch[2].replace(/\*\*/g, "").trim(), done: checkMatch[1].toLowerCase() === "x" };
+      if (currentSection) currentSection.todos.push(todo);
+      else topLevelTodos.push(todo);
+    }
+  }
+  return { topLevelTodos, sections };
+}
+
+function categoryEmoji(category: string | null, name: string): string {
+  const nameLower = (name || "").toLowerCase();
+  if (nameLower.includes("artemis")) return "\u{1F680}";
+  if (nameLower.includes("eclipse")) return "\u{1F311}";
+  if (nameLower.includes("sun today") || nameLower.includes("solar")) return "\u2600\uFE0F";
+  if (nameLower.includes("finland") || nameLower.includes("trip")) return "\u2708\uFE0F";
+  if (nameLower.includes("adhd")) return "\u{1F9E0}";
+  if (nameLower.includes("elder care")) return "\u{1F495}";
+  if (nameLower.includes("home")) return "\u{1F3E0}";
+  if (nameLower.includes("miscellaneous")) return "\u{1F4CC}";
+  if (nameLower.includes("newsletter")) return "\u{1F4F0}";
+  if (nameLower.includes("website") || nameLower.includes("web")) return "\u{1F310}";
+  if (nameLower.includes("dashboard") || nameLower.includes("data")) return "\u{1F4CA}";
+  if (nameLower.includes("learning") || nameLower.includes("ml-ai")) return "\u{1F4DA}";
+  if (nameLower.includes("outreach") || nameLower.includes("communication")) return "\u{1F4E1}";
+  if (nameLower.includes("brand") || nameLower.includes("toolkit")) return "\u{1F3A8}";
+  if (nameLower.includes("innovation") || nameLower.includes("space")) return "\u{1F4A1}";
+  if (nameLower.includes("mission")) return "\u{1F6F0}\uFE0F";
+  if (nameLower.includes("report")) return "\u{1F4DD}";
+  const catMap: Record<string, string> = { nasa: "\u{1F6F0}\uFE0F", personal: "\u{1F3E1}", earthsky: "\u{1F30D}", smithsonian: "\u{1F3DB}\uFE0F", learning: "\u{1F4DA}" };
+  return catMap[category || ""] || "\u{1F4CB}";
+}
+
+function parseProjectFile(filePath: string) {
+  const content = readFileSync(filePath, "utf8");
+  const stat = statSync(filePath);
+  const { frontmatter, body } = parseFrontmatter(content);
+  const { topLevelTodos, sections } = parseCheckboxes(body);
+  const fileName = filePath.split("/").pop()!.replace(/\.md$/, "");
+  const id = fileName.replace(/\s+/g, "-").toLowerCase();
+  const titleMatch = body.match(/^#\s+(.+)/m);
+  const name = titleMatch ? titleMatch[1].trim() : fileName;
+  const emojiMatch = name.match(/^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/u);
+  const emoji = emojiMatch ? emojiMatch[0] : categoryEmoji(frontmatter.category, name);
+  const allTodos = [...topLevelTodos];
+  for (const sec of sections) allTodos.push(...sec.todos);
+  const doneCount = allTodos.filter((t) => t.done).length;
+  const totalCount = allTodos.length;
+  const percent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+  const nextTodo = allTodos.find((t) => !t.done);
+  const staleDays = Math.floor((Date.now() - stat.mtimeMs) / (1000 * 60 * 60 * 24));
+  return {
+    id, fileName, emoji,
+    name: name.replace(/^\p{Emoji_Presentation}\s*/u, "").replace(/^\p{Emoji}\uFE0F\s*/u, ""),
+    status: frontmatter.status || "active",
+    priority: frontmatter.priority || "normal",
+    category: frontmatter.category || "uncategorized",
+    deadline: frontmatter.deadline || null,
+    client: frontmatter.client || null,
+    progress: { done: doneCount, total: totalCount, percent },
+    nextAction: nextTodo ? nextTodo.text : null,
+    staleDays, isStale: staleDays >= 7,
+    modifiedAt: stat.mtime.toISOString(),
+  };
+}
+
+function parseProjectDetail(filePath: string) {
+  const summary = parseProjectFile(filePath);
+  const content = readFileSync(filePath, "utf8");
+  const { body } = parseFrontmatter(content);
+  const { topLevelTodos, sections } = parseCheckboxes(body);
+  return {
+    ...summary,
+    sections: sections.map((s) => ({ name: s.name, todos: s.todos, done: s.todos.filter((t) => t.done).length, total: s.todos.length })),
+    topLevelTodos,
+    body,
+  };
+}
+
+export function getAllProjects() {
+  const now = Date.now();
+  if (projectsCache.data && (now - projectsCache.timestamp) < PROJECTS_CACHE_MS) return projectsCache.data;
+  try {
+    if (!existsSync(PROJECTS_DIR)) return [];
+    const files = readdirSync(PROJECTS_DIR).filter((f) => f.endsWith(".md"));
+    const projects = files.map((f) => {
+      try { return parseProjectFile(join(PROJECTS_DIR, f)); }
+      catch { return null; }
+    }).filter(Boolean);
+    const priorityOrder: Record<string, number> = { high: 0, medium: 1, normal: 2, low: 3 };
+    projects.sort((a: any, b: any) => {
+      const pa = priorityOrder[a.priority] ?? 2;
+      const pb = priorityOrder[b.priority] ?? 2;
+      if (pa !== pb) return pa - pb;
+      if (b.isStale !== a.isStale) return b.isStale ? 1 : -1;
+      return a.name.localeCompare(b.name);
+    });
+    projectsCache = { data: projects, timestamp: now };
+    return projects;
+  } catch {
+    return [];
+  }
+}
+
+export function getProjectDetail(requestedId: string) {
+  if (!existsSync(PROJECTS_DIR)) throw new Error("Projects directory not found");
+  const files = readdirSync(PROJECTS_DIR).filter((f) => f.endsWith(".md"));
+  const matchFile = files.find((f) => {
+    const slug = f.replace(/\.md$/, "").replace(/\s+/g, "-").toLowerCase();
+    return slug === requestedId;
+  });
+  if (!matchFile) throw new Error("Project not found");
+  return parseProjectDetail(join(PROJECTS_DIR, matchFile));
 }

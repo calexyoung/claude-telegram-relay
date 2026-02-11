@@ -46,6 +46,18 @@ import {
   getModels,
   updateModel,
   getServices,
+  getDaily,
+  getWeather,
+  getCaptures,
+  addCapture,
+  deleteCapture,
+  moveCapture,
+  taskDone,
+  taskMove,
+  taskTrash,
+  taskRestore,
+  getAllProjects,
+  getProjectDetail,
 } from "./dashboard/api";
 
 const PROJECT_ROOT = dirname(dirname(import.meta.path));
@@ -1014,7 +1026,49 @@ Bun.serve({
               memory: process.memoryUsage(),
             };
             break;
+          // ── Daily Dashboard ──
+          case "daily":
+            result = getDaily();
+            break;
+          case "weather":
+            result = await getWeather();
+            break;
+          case "captures":
+            if (req.method === "POST") {
+              result = addCapture(await req.json());
+            } else {
+              result = getCaptures();
+            }
+            break;
+          case "captures/delete":
+            result = deleteCapture(await req.json());
+            break;
+          case "captures/move":
+            result = moveCapture(await req.json());
+            break;
+          case "task/done":
+            result = taskDone(await req.json());
+            break;
+          case "task/move":
+            result = taskMove(await req.json());
+            break;
+          case "task/trash":
+            result = taskTrash(await req.json());
+            break;
+          case "task/restore":
+            result = taskRestore(await req.json());
+            break;
+          // ── Projects ──
+          case "projects":
+            result = getAllProjects();
+            break;
           default:
+            // Check for projects/:id route
+            if (route.startsWith("projects/")) {
+              const projectId = decodeURIComponent(route.replace("projects/", ""));
+              result = getProjectDetail(projectId);
+              break;
+            }
             return new Response(JSON.stringify({ error: "Not found" }), {
               status: 404,
               headers: corsHeaders,

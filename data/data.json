@@ -1,0 +1,111 @@
+{
+  "date": "2026-02-07",
+  "dayOfWeek": "Saturday",
+  "location": "Towson, MD (home)",
+  "mood": 9,
+  "energy": 8,
+  "sleep": "~8 hours, fairly good",
+  "focus": "Easy Saturday: light house reset, Finland prep, and one Eva/Claude Code block.",
+  "adhdFocus": {
+    "day": 15,
+    "total": 19,
+    "label": "Today's Focus",
+    "title": "One small cluster at a time",
+    "description": "Pick one small cluster (physical or digital), close it fully, then move on. Avoid starting five zones and finishing none.",
+    "strategy": "Choose a single area (home office today), clear trash, group 'elsewhere' items into one box, and stop when the timer ends—even if it's not perfect."
+  },
+  "schedule": [
+    {
+      "time": "Morning",
+      "event": "Trash & recycling out; email Alison about pre-Finland planning"
+    },
+    {
+      "time": "Late morning / early afternoon",
+      "event": "Home office tidy (one-zone focus) and stage returns in one place"
+    },
+    {
+      "time": "Afternoon",
+      "event": "Eva / Claude Code upgrade focus block (about 60 minutes)"
+    },
+    {
+      "time": "4:00 PM",
+      "event": "Minimum MOVE (walk or light movement)"
+    },
+    {
+      "time": "Evening",
+      "event": "Optional Sunset & Moon Walk; gentle wind-down"
+    }
+  ],
+  "tasks": {
+    "today": [
+      "Take out trash and recycling",
+      "Email Alison about pre-Finland trip planning",
+      "Review Finland travel checklist (at least a quick pass)",
+      "Tidy home office desk + immediate floor area (one zone)",
+      "Stage all returns in one spot near the door",
+      "Do one concrete Eva/Claude Code improvement (about 60 minutes)",
+      "Hit minimum MOVE goal"
+    ],
+    "thisWeek": [
+      "Re-establish daily check-ins after office-move week",
+      "Review Finland travel checklist in more detail",
+      "Identify 1–2 small Eva/dashboard improvements to ship"
+    ],
+    "nextWeek": [
+      "Finish unpacking and fine-tuning Building 28 Room S209 setup",
+      "Plan concrete prep steps for Finland trip (clothes/gear/documents)"
+    ],
+    "later": [
+      "Data dashboard proposal + expanded project view",
+      "Connect with Anthony B re: HDRL",
+      "Aurora hunter phone app — explore with Vincent Ledvina (UAF)",
+      "Project: Sell comic book collection"
+    ],
+    "noDate": [],
+    "done": [
+      {
+        "text": "Major office move from Building 21 to Building 28 completed; new office (Room S209) fully functional",
+        "completedAt": "2026-02-06T23:00:00Z",
+        "from": "thisWeek"
+      },
+      {
+        "text": "All daily checks completed Monday Feb 2 – Friday Feb 6 during move week",
+        "completedAt": "2026-02-06T23:05:00Z",
+        "from": "thisWeek"
+      },
+      {
+        "text": "EarthSky post completed for Saturday Feb 7",
+        "completedAt": "2026-02-07T12:01:00Z",
+        "from": "today"
+      }
+    ],
+    "trash": []
+  },
+  "habits": {
+    "labels": [
+      "Morning check-in",
+      "Morning medication",
+      "Exercise",
+      "Evening medication",
+      "Healthy eating",
+      "Evening wind-down"
+    ],
+    "days": [
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "data": [
+      [true, true, true, true, true, true, true],
+      [true, true, true, true, true, true, true],
+      [true, true, true, true, true, true, true],
+      [true, true, true, true, true, true, true],
+      [true, true, true, true, true, true, true],
+      [true, true, true, true, true, true, true]
+    ]
+  }
+}

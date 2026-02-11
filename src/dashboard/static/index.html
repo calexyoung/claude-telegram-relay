@@ -15,7 +15,16 @@
         <div class="version">v1.0.0</div>
       </div>
       <nav class="sidebar-nav">
-        <div class="nav-item active" data-tab="overview">
+        <div class="nav-item active" data-tab="daily">
+          <span class="icon">&#9788;</span>
+          <span class="nav-label">Daily</span>
+        </div>
+        <div class="nav-item" data-tab="projects">
+          <span class="icon">&#9881;</span>
+          <span class="nav-label">Projects</span>
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-item" data-tab="overview">
           <span class="icon">&#9632;</span>
           <span class="nav-label">Overview</span>
         </div>
@@ -57,8 +66,112 @@
     <!-- Main Content -->
     <main class="main-content">
 
+      <!-- ── Daily ───────────────────────────────────── -->
+      <div class="tab-content active" id="tab-daily">
+        <!-- Hero Banner -->
+        <div class="daily-hero" id="dailyHero">
+          <div class="daily-hero-overlay"></div>
+          <div class="daily-hero-content">
+            <div class="daily-hero-left">
+              <div class="daily-greeting" id="dailyGreeting"></div>
+              <div class="daily-time" id="dailyTime"></div>
+              <div class="daily-date" id="dailyDate"></div>
+              <div class="daily-utc" id="dailyUtc">UTC: --:--</div>
+            </div>
+            <div class="daily-hero-right" id="dailyWeather">
+              <div class="daily-weather-loading">Loading weather...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vitals -->
+        <div class="panel">
+          <div class="panel-header"><h3>Today's Vitals</h3></div>
+          <div class="panel-body">
+            <div class="daily-vitals-row">
+              <div class="daily-metrics" id="dailyMetrics"></div>
+              <div class="daily-sleep" id="dailySleep"></div>
+              <div class="daily-focus-text" id="dailyFocusText"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADHD Focus + Schedule -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="panel">
+            <div class="panel-header"><h3>ADHD Focus</h3></div>
+            <div class="panel-body" id="dailyAdhd"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h3>Schedule</h3></div>
+            <div class="panel-body" id="dailySchedule"></div>
+          </div>
+        </div>
+
+        <!-- Tasks Kanban -->
+        <div class="panel">
+          <div class="panel-header"><h3>Tasks</h3></div>
+          <div class="panel-body">
+            <div class="daily-kanban" id="dailyKanban"></div>
+          </div>
+        </div>
+
+        <!-- Habits -->
+        <div class="panel">
+          <div class="panel-header"><h3>Habits &mdash; Last 7 Days</h3></div>
+          <div class="panel-body">
+            <div class="daily-habits" id="dailyHabits"></div>
+          </div>
+        </div>
+
+        <!-- Quick Capture -->
+        <div class="panel">
+          <div class="panel-header"><h3>Quick Capture</h3></div>
+          <div class="panel-body">
+            <div class="daily-capture-form">
+              <input type="text" class="input daily-capture-input" id="captureInput" placeholder="Capture a thought, task, or idea...">
+              <button class="btn primary" onclick="submitCapture()">Capture</button>
+            </div>
+            <div id="captureList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Projects ────────────────────────────────── -->
+      <div class="tab-content" id="tab-projects">
+        <div class="page-header">
+          <h2>Projects</h2>
+          <div class="header-actions">
+            <button class="btn" onclick="loadProjects()">Refresh</button>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="daily-projects-stats" id="projectsStats"></div>
+
+        <!-- Filter bar -->
+        <div class="daily-filter-bar" id="filterBar">
+          <button class="daily-filter-btn active" data-filter="all" onclick="filterProjects('all')">All</button>
+          <button class="daily-filter-btn" data-filter="nasa" onclick="filterProjects('nasa')">NASA</button>
+          <button class="daily-filter-btn" data-filter="personal" onclick="filterProjects('personal')">Personal</button>
+          <button class="daily-filter-btn" data-filter="high" onclick="filterProjects('high')">High Priority</button>
+          <button class="daily-filter-btn" data-filter="stale" onclick="filterProjects('stale')">Stale</button>
+        </div>
+
+        <!-- Project cards -->
+        <div class="daily-projects-grid" id="projectsGrid">
+          <div class="loading">Loading projects...</div>
+        </div>
+
+        <!-- Project detail (hidden by default) -->
+        <div id="projectDetail" style="display:none;">
+          <button class="btn" onclick="closeProjectDetail()" style="margin-bottom:16px;">&#8592; Back to Projects</button>
+          <div id="projectDetailContent"></div>
+        </div>
+      </div>
+
       <!-- ── Overview ──────────────────────────────────── -->
-      <div class="tab-content active" id="tab-overview">
+      <div class="tab-content" id="tab-overview">
         <div class="page-header">
           <h2>Overview</h2>
           <div class="header-actions">

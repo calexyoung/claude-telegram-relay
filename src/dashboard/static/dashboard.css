@@ -850,6 +850,473 @@ body {
   background: var(--border-light);
 }
 
+/* ── Nav Divider ──────────────────────────────────────────── */
+
+.nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 12px;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* ── Daily Tab Styles ────────────────────────────────────────  */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* Hero Banner */
+.daily-hero {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 20px;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  background: #0f172a url('https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_0335.jpg') no-repeat;
+  background-size: cover;
+  background-position: 65% center;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+
+.daily-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg,
+    rgba(10, 14, 23, 0.94) 0%,
+    rgba(10, 14, 23, 0.82) 40%,
+    rgba(10, 14, 23, 0.55) 70%,
+    rgba(10, 14, 23, 0.30) 100%);
+  z-index: 1;
+}
+
+.daily-hero-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 32px 36px;
+  gap: 24px;
+}
+
+.daily-hero-left { flex: 1; min-width: 0; }
+.daily-hero-right { text-align: right; flex-shrink: 0; }
+
+.daily-greeting {
+  font-size: 1.4rem;
+  font-weight: 300;
+  color: var(--text-primary);
+  opacity: 0.95;
+}
+
+.daily-greeting span {
+  font-weight: 600;
+  color: var(--accent-hover);
+}
+
+.daily-time {
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+.daily-date {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 6px;
+}
+
+.daily-utc {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Weather in hero */
+.daily-weather-emoji { font-size: 2.8rem; margin-bottom: 6px; }
+.daily-weather-temp { font-size: 1.7rem; font-weight: 700; color: #fff; }
+.daily-weather-desc { font-size: 0.9rem; color: rgba(255,255,255,0.65); margin-top: 4px; }
+.daily-weather-details {
+  display: flex; gap: 14px; justify-content: flex-end;
+  margin-top: 8px; font-size: 0.75rem; color: rgba(255,255,255,0.4);
+}
+.daily-weather-loading { font-size: 0.85rem; color: rgba(255,255,255,0.35); font-style: italic; }
+
+/* Vitals */
+.daily-vitals-row {
+  display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+}
+
+.daily-metrics { display: flex; gap: 16px; }
+
+.daily-metric {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+
+.daily-metric-circle {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 700; border: 3px solid;
+}
+
+.daily-metric-label {
+  font-size: 0.65rem; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
+}
+
+.daily-sleep {
+  font-size: 0.85rem; color: var(--text-secondary);
+  padding: 8px 14px; background: var(--blue-bg); border-radius: var(--radius);
+  white-space: nowrap;
+}
+
+.daily-focus-text {
+  flex: 1; min-width: 200px;
+  background: var(--accent-glow); border-left: 3px solid var(--accent);
+  padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5;
+}
+
+/* ADHD Focus */
+.daily-adhd-day {
+  display: inline-block; background: var(--accent); color: #fff;
+  font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 6px;
+}
+
+.daily-adhd-label {
+  display: inline-block; background: var(--yellow-bg); color: var(--yellow);
+  font-size: 0.65rem; font-weight: 700; padding: 3px 10px; border-radius: 6px;
+  margin-left: 6px;
+}
+
+.daily-adhd-title {
+  font-size: 1rem; font-weight: 700; margin: 10px 0 6px; letter-spacing: -0.01em;
+}
+
+.daily-adhd-desc {
+  font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5;
+}
+
+.daily-adhd-strategy {
+  background: var(--green-bg); border-left: 3px solid var(--green);
+  padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 0.82rem; margin-top: 12px; color: var(--green); line-height: 1.5;
+}
+
+/* Schedule */
+.daily-schedule-item {
+  display: flex; gap: 14px; padding: 10px 0;
+  border-bottom: 1px solid var(--border); align-items: flex-start;
+}
+.daily-schedule-item:last-child { border-bottom: none; }
+.daily-schedule-item.next {
+  background: var(--accent-glow); border-left: 3px solid var(--accent);
+  padding-left: 12px; margin: 2px -20px; padding-right: 20px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.daily-schedule-time {
+  font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;
+  min-width: 100px; font-weight: 500;
+}
+.daily-schedule-event { font-size: 0.85rem; line-height: 1.4; }
+.daily-next-badge {
+  font-size: 0.55rem; font-weight: 800; background: var(--accent); color: #fff;
+  padding: 2px 7px; border-radius: 4px; margin-right: 6px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* Tasks Kanban */
+.daily-kanban {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;
+}
+
+.daily-kanban-col h4 {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 7px 10px; border-radius: var(--radius); margin-bottom: 8px;
+  display: flex; justify-content: space-between; align-items: center; font-weight: 700;
+}
+
+.daily-count {
+  background: rgba(255,255,255,0.12); padding: 1px 7px; border-radius: 10px;
+  font-size: 0.65rem;
+}
+
+.col-today h4 { background: var(--red-bg); color: var(--red); }
+.col-week h4 { background: var(--yellow-bg); color: var(--yellow); }
+.col-next h4 { background: rgba(251, 146, 60, 0.1); color: #fb923c; }
+.col-later h4 { background: var(--green-bg); color: var(--green); }
+.col-nodate h4 { background: rgba(90, 100, 120, 0.1); color: var(--text-muted); }
+.col-done h4 { background: var(--blue-bg); color: var(--blue); }
+.col-trash h4 { background: var(--red-bg); color: var(--text-muted); }
+
+.daily-task-card {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 12px; margin-bottom: 6px;
+  transition: all var(--transition);
+}
+
+.daily-task-card:hover {
+  border-color: var(--border-light); background: var(--bg-hover);
+}
+
+.daily-task-text { font-size: 0.8rem; margin-bottom: 6px; line-height: 1.4; }
+
+.daily-task-actions { display: flex; gap: 3px; flex-wrap: wrap; }
+
+.daily-task-btn {
+  font-size: 0.6rem; padding: 2px 7px; border-radius: 4px;
+  border: none; cursor: pointer; font-weight: 700; opacity: 0.7;
+  transition: all var(--transition); font-family: inherit;
+}
+
+.daily-task-btn:hover { opacity: 1; }
+.daily-task-btn.done { background: var(--green); color: #0a0e17; }
+.daily-task-btn.move { background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); }
+.daily-task-btn.move:hover { border-color: var(--accent); color: var(--accent-hover); }
+.daily-task-btn.trash { background: var(--red-bg); color: var(--red); }
+
+.daily-done-task {
+  text-decoration: line-through; color: var(--text-muted); font-size: 0.78rem;
+  padding: 5px 0; border-bottom: 1px solid var(--border);
+}
+.daily-done-task:last-child { border-bottom: none; }
+
+.daily-no-tasks { font-size: 0.78rem; color: var(--text-muted); font-style: italic; padding: 6px 0; }
+
+/* Habits */
+.daily-habits { display: grid; gap: 4px; }
+
+.daily-habit-row {
+  display: grid; grid-template-columns: 140px repeat(7, 1fr);
+  gap: 4px; align-items: center;
+}
+
+.daily-habit-label {
+  font-size: 0.75rem; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; font-weight: 500;
+}
+
+.daily-habit-header {
+  font-size: 0.6rem; color: var(--text-muted); text-align: center; font-weight: 600;
+}
+
+.daily-habit-cell {
+  width: 100%; aspect-ratio: 1; max-width: 30px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 600;
+}
+
+.daily-habit-cell.yes { background: var(--green-bg); color: var(--green); }
+.daily-habit-cell.no { background: var(--red-bg); color: var(--red); }
+.daily-habit-cell.na { background: rgba(90, 100, 120, 0.05); color: var(--text-muted); }
+
+/* Quick Capture */
+.daily-capture-form { display: flex; gap: 10px; margin-bottom: 12px; }
+.daily-capture-input { flex: 1; }
+
+.daily-capture-item {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px;
+}
+
+.daily-capture-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+}
+.daily-capture-text { font-size: 0.85rem; line-height: 1.4; }
+.daily-capture-time { color: var(--text-muted); font-size: 0.68rem; white-space: nowrap; margin-left: 12px; }
+.daily-capture-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+
+/* ══════════════════════════════════════════════════════════════ */
+/* ── Projects Tab Styles ─────────────────────────────────────  */
+/* ══════════════════════════════════════════════════════════════ */
+
+.daily-projects-stats {
+  display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
+}
+
+.daily-proj-stat {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.78rem; color: var(--text-secondary); font-weight: 500;
+}
+
+.daily-proj-stat-num {
+  font-weight: 800; font-size: 1rem; color: var(--text-primary);
+}
+
+.daily-filter-bar {
+  display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap;
+}
+
+.daily-filter-btn {
+  padding: 6px 14px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 20px; color: var(--text-secondary); font-size: 0.75rem;
+  font-weight: 600; cursor: pointer; transition: all var(--transition); font-family: inherit;
+}
+
+.daily-filter-btn:hover {
+  background: var(--bg-hover); border-color: var(--border-light); color: var(--text-primary);
+}
+
+.daily-filter-btn.active {
+  background: var(--accent-glow); border-color: var(--accent); color: var(--accent-hover);
+}
+
+.daily-projects-grid { display: grid; gap: 10px; }
+
+.daily-project-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 18px;
+  cursor: pointer; transition: all var(--transition);
+}
+
+.daily-project-card:hover {
+  background: var(--bg-hover); border-color: var(--border-light);
+  transform: translateY(-1px); box-shadow: var(--shadow-lg);
+}
+
+.daily-project-card.stale { border-left: 3px solid var(--yellow); }
+
+.daily-project-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+}
+
+.daily-project-emoji { font-size: 1.3rem; flex-shrink: 0; }
+
+.daily-project-name {
+  font-size: 0.95rem; font-weight: 700; flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Badges */
+.daily-badge {
+  font-size: 0.6rem; font-weight: 700; padding: 2px 8px; border-radius: 5px;
+  letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+}
+
+.badge-nasa { background: var(--blue-bg); color: var(--blue); }
+.badge-personal { background: var(--green-bg); color: var(--green); }
+.badge-earthsky { background: rgba(251, 146, 60, 0.1); color: #fb923c; }
+.badge-smithsonian { background: rgba(168, 85, 247, 0.1); color: var(--purple); }
+.badge-learning { background: rgba(244, 114, 182, 0.1); color: #f472b6; }
+.badge-uncategorized { background: rgba(90, 100, 120, 0.1); color: var(--text-muted); }
+.badge-high { background: var(--red-bg); color: var(--red); }
+.badge-medium { background: var(--yellow-bg); color: var(--yellow); }
+.badge-normal { background: var(--blue-bg); color: rgba(96, 165, 250, 0.7); }
+.badge-stale { background: var(--yellow-bg); color: var(--yellow); }
+
+/* Progress bar */
+.daily-progress-container {
+  display: flex; align-items: center; gap: 10px; margin: 8px 0 6px;
+}
+
+.daily-progress-bar {
+  flex: 1; display: flex; gap: 2px; height: 7px; border-radius: 4px;
+  overflow: hidden; background: rgba(255, 255, 255, 0.04);
+}
+
+.daily-progress-bar.empty { height: 7px; }
+
+.daily-progress-segment {
+  flex: 1; border-radius: 2px; transition: background 0.3s ease;
+}
+
+.daily-progress-segment.done {
+  background: var(--green); box-shadow: 0 0 4px rgba(34, 197, 94, 0.3);
+}
+
+.daily-progress-segment.todo { background: rgba(255, 255, 255, 0.08); }
+
+.daily-progress-text {
+  font-size: 0.7rem; color: var(--text-muted); font-weight: 600;
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+
+.daily-project-next {
+  font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;
+}
+
+.daily-stale-warn {
+  font-size: 0.7rem; color: var(--yellow); margin-top: 4px; font-weight: 600;
+}
+
+/* Project Detail */
+.daily-detail-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+}
+
+.daily-detail-emoji { font-size: 2rem; }
+
+.daily-detail-title {
+  font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em;
+}
+
+.daily-detail-meta {
+  display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap;
+}
+
+.daily-detail-progress-card {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 18px;
+}
+
+.daily-detail-progress-label {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted); margin-bottom: 8px; font-weight: 600;
+}
+
+.daily-detail-progress-big {
+  font-size: 1.8rem; font-weight: 800; color: var(--green); margin-bottom: 6px;
+}
+
+.daily-detail-section { margin-bottom: 18px; }
+
+.daily-detail-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  font-size: 0.88rem; font-weight: 700;
+}
+
+.daily-detail-section-count {
+  font-size: 0.7rem; color: var(--text-muted); font-weight: 600;
+  background: var(--bg-secondary); padding: 2px 8px; border-radius: 8px;
+}
+
+.daily-detail-todo {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 10px; border-radius: var(--radius); margin-bottom: 3px;
+  transition: background var(--transition);
+}
+
+.daily-detail-todo:hover { background: var(--bg-hover); }
+
+.daily-detail-todo.done .daily-detail-text {
+  text-decoration: line-through; opacity: 0.4;
+}
+
+.daily-detail-todo.next {
+  background: var(--accent-glow); border-left: 3px solid var(--accent); padding-left: 7px;
+}
+
+.daily-detail-todo.next .daily-detail-text { color: var(--accent-hover); font-weight: 600; }
+
+.daily-detail-check {
+  width: 18px; height: 18px; border-radius: 5px;
+  border: 2px solid var(--border-light); display: flex;
+  align-items: center; justify-content: center;
+  font-size: 0.65rem; flex-shrink: 0; margin-top: 1px;
+}
+
+.daily-detail-check.checked {
+  background: var(--green); border-color: var(--green); color: #0a0e17;
+}
+
+.daily-detail-text { font-size: 0.85rem; line-height: 1.5; }
+
 /* ── Responsive ───────────────────────────────────────────── */
 
 @media (max-width: 768px) {
@@ -877,8 +1344,23 @@ body {
     margin: 0;
   }
 
+  .nav-divider { margin: 6px 8px; }
+
   .main-content {
     margin-left: 60px;
     padding: 16px;
   }
+
+  .daily-hero-content {
+    flex-direction: column; padding: 20px; gap: 16px; text-align: center;
+  }
+  .daily-hero-right { text-align: center; }
+  .daily-time { font-size: 2.4rem; }
+  .daily-greeting { font-size: 1.2rem; }
+  .daily-weather-details { justify-content: center; }
+  .daily-kanban { grid-template-columns: 1fr 1fr; }
+  .daily-vitals-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .daily-focus-text { min-width: unset; width: 100%; }
+  .daily-capture-form { flex-direction: column; }
+  .daily-habit-row { grid-template-columns: 100px repeat(7, 1fr); }
 }
