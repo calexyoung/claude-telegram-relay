@@ -17,6 +17,15 @@ const path = require("path");
 
 const APP_DIR = path.resolve(__dirname, "..");
 const BUN = process.env.BUN_PATH || "bun";
+const HOME = process.env.HOME || "/home/clawdbot";
+const VPS_PATH = [
+  `${HOME}/.bun/bin`,
+  `${HOME}/.nvm/versions/node/v24.13.0/bin`,
+  `${HOME}/.local/bin`,
+  "/usr/local/bin",
+  "/usr/bin",
+  "/bin",
+].join(":");
 
 module.exports = {
   apps: [
@@ -35,6 +44,7 @@ module.exports = {
       max_memory_restart: "512M",
       env: {
         NODE_ENV: "production",
+        PATH: VPS_PATH,
       },
       // Graceful shutdown
       kill_timeout: 5000,
@@ -57,6 +67,7 @@ module.exports = {
       cron_restart: "*/30 9-18 * * *", // Every 30 min, 9am-6pm
       env: {
         NODE_ENV: "production",
+        PATH: VPS_PATH,
       },
       error_file: path.join(APP_DIR, "logs", "smart-checkin-error.log"),
       out_file: path.join(APP_DIR, "logs", "smart-checkin-out.log"),
@@ -75,6 +86,7 @@ module.exports = {
       cron_restart: "0 9 * * *", // Daily at 9am
       env: {
         NODE_ENV: "production",
+        PATH: VPS_PATH,
       },
       error_file: path.join(APP_DIR, "logs", "morning-briefing-error.log"),
       out_file: path.join(APP_DIR, "logs", "morning-briefing-out.log"),
@@ -95,6 +107,7 @@ module.exports = {
       restart_delay: 10000,
       env: {
         NODE_ENV: "production",
+        PATH: VPS_PATH,
       },
       // Graceful shutdown
       kill_timeout: 3000,

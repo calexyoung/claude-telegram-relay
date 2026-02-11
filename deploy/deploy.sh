@@ -14,7 +14,7 @@ set -euo pipefail
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "${APP_DIR}"
 
-export PATH="$HOME/.bun/bin:$PATH"
+export PATH="$HOME/.bun/bin:$HOME/.nvm/versions/node/v24.13.0/bin:$HOME/.local/bin:$PATH"
 
 echo "── Deploying Claude Telegram Relay ──"
 echo "  Dir: ${APP_DIR}"
@@ -23,7 +23,7 @@ echo ""
 
 # ── 1. Pull latest code ────────────────────────────────────
 echo "[1/4] Pulling latest code..."
-git pull origin main
+git pull origin master
 
 # ── 2. Install dependencies ─────────────────────────────────
 echo "[2/4] Installing dependencies..."
