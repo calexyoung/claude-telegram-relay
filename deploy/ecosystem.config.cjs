@@ -81,5 +81,28 @@ module.exports = {
       merge_logs: true,
       log_date_format: "YYYY-MM-DD HH:mm:ss Z",
     },
+
+    // ── Watchdog Monitor (always-on, independent) ────────────
+    {
+      name: "watchdog",
+      interpreter: BUN,
+      script: "run",
+      args: "src/watchdog.ts",
+      cwd: APP_DIR,
+      autorestart: true,
+      max_restarts: 5,
+      min_uptime: "10s",
+      restart_delay: 10000,
+      env: {
+        NODE_ENV: "production",
+      },
+      // Graceful shutdown
+      kill_timeout: 3000,
+      // Logs
+      error_file: path.join(APP_DIR, "logs", "watchdog-error.log"),
+      out_file: path.join(APP_DIR, "logs", "watchdog-out.log"),
+      merge_logs: true,
+      log_date_format: "YYYY-MM-DD HH:mm:ss Z",
+    },
   ],
 };

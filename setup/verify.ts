@@ -118,7 +118,33 @@ async function main() {
     }
   }
 
-  // 5. Optional
+  // 5. Health endpoint
+  console.log(`\n${bold("  Health Endpoint")}`);
+  const healthPort = env.HEALTH_PORT || "3000";
+  try {
+    const healthRes = await fetch(`http://localhost:${healthPort}/health`);
+    if (healthRes.ok) {
+      const health = await healthRes.json() as any;
+      pass(`Bot running (uptime: ${Math.floor(health.uptime / 60)}m)`);
+      if (health.memory?.rss) {
+        const rssMB = Math.round(health.memory.rss / 1024 / 1024);
+        rssMB < 512 ? pass(`Memory: ${rssMB}MB`) : warn(`Memory: ${rssMB}MB (high)`);
+      }
+      if (health.services) {
+        for (const [svc, status] of Object.entries(health.services)) {
+          status === "connected" || status === "configured"
+            ? pass(`Service: ${svc}`)
+            : warn(`Service: ${svc} — ${status}`);
+        }
+      }
+    } else {
+      warn(`Health endpoint returned ${healthRes.status}`);
+    }
+  } catch {
+    warn(`Health endpoint not reachable on port ${healthPort} (bot may not be running)`);
+  }
+
+  // 6. Optional
   console.log(`\n${bold("  Optional")}`);
   env.GEMINI_API_KEY && !env.GEMINI_API_KEY.includes("your_")
     ? pass("Voice transcription (Gemini) configured")
@@ -131,6 +157,22 @@ async function main() {
   env.ELEVENLABS_AGENT_ID && env.ELEVENLABS_PHONE_NUMBER_ID && env.USER_PHONE_NUMBER
     ? pass("Phone calls (ElevenLabs + Twilio) configured")
     : warn("Phone calls not configured (ELEVENLABS_AGENT_ID, PHONE_NUMBER_ID, USER_PHONE_NUMBER)");
+
+  env.OPENWEATHERMAP_API_KEY && !env.OPENWEATHERMAP_API_KEY.includes("your_")
+    ? pass(`Weather integration configured (${env.WEATHER_LOCATION || "no location"})`)
+    : warn("No OPENWEATHERMAP_API_KEY — weather disabled");
+
+  env.NOTION_API_KEY && !env.NOTION_API_KEY.includes("your_") && env.NOTION_DATABASE_ID
+    ? pass("Notion integration configured")
+    : warn("Notion not configured (NOTION_API_KEY, NOTION_DATABASE_ID)");
+
+  env.OPENROUTER_API_KEY && !env.OPENROUTER_API_KEY.includes("your_")
+    ? pass(`Fallback: OpenRouter configured (${env.OPENROUTER_MODEL || "default model"})`)
+    : warn("No OPENROUTER_API_KEY — no cloud fallback");
+
+  env.TELEGRAM_FORUM_GROUP_ID
+    ? pass(`Forum agents configured (group: ${env.TELEGRAM_FORUM_GROUP_ID})`)
+    : warn("No TELEGRAM_FORUM_GROUP_ID — forum agents disabled");
 
   env.USER_NAME && !env.USER_NAME.includes("Your ")
     ? pass(`Name: ${env.USER_NAME}`)

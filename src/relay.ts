@@ -208,6 +208,7 @@ bot.use(async (ctx, next) => {
 
 // Track which provider served the last request
 let lastProvider: ProviderResult["provider"] = "claude";
+let lastMessageAt: string | null = null;
 
 async function callClaudeCLI(
   prompt: string,
@@ -508,6 +509,7 @@ bot.on("message:text", async (ctx) => {
   const agent = detectAgent(ctx);
   const agentSlug = agent?.slug;
 
+  lastMessageAt = new Date().toISOString();
   log("message_received", text.substring(0, 80), {
     metadata: { type: "text", agent: agentSlug || "general" },
   });
@@ -530,6 +532,7 @@ bot.on("message:text", async (ctx) => {
 
 // Voice messages (transcription via Google Gemini)
 bot.on("message:voice", async (ctx) => {
+  lastMessageAt = new Date().toISOString();
   log("message_received", "Voice message", { metadata: { type: "voice" } });
   await ctx.replyWithChatAction("typing");
 
@@ -861,15 +864,29 @@ Bun.serve({
   fetch(req) {
     const url = new URL(req.url);
     if (url.pathname === "/health") {
+      const mem = process.memoryUsage();
       return new Response(
         JSON.stringify({
           status: "ok",
+          version: "1.0.0",
           uptime: Math.floor((Date.now() - botStartTime) / 1000),
           timestamp: new Date().toISOString(),
           sessionId: sessions.sessionId,
           lastProvider,
           fallbackEnabled: isFallbackEnabled(),
           forumMode: isForumMode(),
+          lastMessageAt,
+          memory: {
+            rss: mem.rss,
+            heapUsed: mem.heapUsed,
+          },
+          services: {
+            supabase: process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes("your_") ? "connected" : "not_configured",
+            tts: isTTSAvailable() ? "configured" : "not_configured",
+            phone: isPhoneAvailable() ? "configured" : "not_configured",
+            weather: process.env.OPENWEATHERMAP_API_KEY ? "configured" : "not_configured",
+            notion: process.env.NOTION_API_KEY && process.env.NOTION_DATABASE_ID ? "configured" : "not_configured",
+          },
         }),
         { headers: { "Content-Type": "application/json" } }
       );
