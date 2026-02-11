@@ -16,8 +16,9 @@
 const path = require("path");
 
 const APP_DIR = path.resolve(__dirname, "..");
-const BUN = process.env.BUN_PATH || "bun";
 const HOME = process.env.HOME || "/home/clawdbot";
+// Resolve bun path — bypass PM2's ProcessContainerForkBun which can't handle async modules
+const BUN = process.env.BUN_PATH || `${HOME}/.nvm/versions/node/v24.13.0/bin/bun`;
 const VPS_PATH = [
   `${HOME}/.bun/bin`,
   `${HOME}/.nvm/versions/node/v24.13.0/bin`,
@@ -32,8 +33,9 @@ module.exports = {
     // ── Main Telegram Bot (always-on) ──────────────────────
     {
       name: "telegram-bot",
-      interpreter: BUN,
-      script: "src/relay.ts",
+      interpreter: "none",
+      script: BUN,
+      args: "src/relay.ts",
       cwd: APP_DIR,
       autorestart: true,
       max_restarts: 10,
@@ -58,8 +60,9 @@ module.exports = {
     // ── Smart Check-in (every 30 min, 9am–6pm) ────────────
     {
       name: "smart-checkin",
-      interpreter: BUN,
-      script: "examples/smart-checkin.ts",
+      interpreter: "none",
+      script: BUN,
+      args: "examples/smart-checkin.ts",
       cwd: APP_DIR,
       autorestart: false, // cron handles scheduling
       cron_restart: "*/30 9-18 * * *", // Every 30 min, 9am-6pm
@@ -76,8 +79,9 @@ module.exports = {
     // ── Morning Briefing (daily at 9am) ────────────────────
     {
       name: "morning-briefing",
-      interpreter: BUN,
-      script: "examples/morning-briefing.ts",
+      interpreter: "none",
+      script: BUN,
+      args: "examples/morning-briefing.ts",
       cwd: APP_DIR,
       autorestart: false, // cron handles scheduling
       cron_restart: "0 9 * * *", // Daily at 9am
@@ -94,8 +98,9 @@ module.exports = {
     // ── Watchdog Monitor (always-on, independent) ────────────
     {
       name: "watchdog",
-      interpreter: BUN,
-      script: "src/watchdog.ts",
+      interpreter: "none",
+      script: BUN,
+      args: "src/watchdog.ts",
       cwd: APP_DIR,
       autorestart: true,
       max_restarts: 5,
